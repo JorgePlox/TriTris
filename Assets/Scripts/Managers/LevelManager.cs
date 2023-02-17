@@ -10,17 +10,24 @@ public class LevelManager : MonoBehaviour
 
     private float levelScore = 0f;
     private int clearedLines = 0;
+    private int levelClearedLines = 0;
     private float elapsedSeconds = 0f;
     private int elapsedMinutes = 0;
     private Vector2Int actualTime = new Vector2Int(0,0);
     private Vector2Int previusTime = new Vector2Int(0,0);
-    private int actualLevel = 0;
+    private const int _MAXLEVEL = 9;
+    private int selectedDifficultyLevel = 0;
+    private int currentDifficultyLevel = 0;
     private float difficultyScoreMultiplier = 1f;
     private float comboScoreMultiplier = 1f;
     public event EventHandler<Vector3Int> OnLineCleared;
     public event EventHandler<Vector2Int> OnTimeElapsed;
+    public event EventHandler<int> OnDifficultyLevelIncreased;
 
-    private int fourBlockScore = 10;
+    private int blocksToLevelUp = 20;
+    private int blocksToNextLevel;
+
+    private int fourBlockScore = 40;
     private int fiveBlockScore = 100;
     private int sixOrMoreBlockScore = 300;
 
@@ -39,6 +46,9 @@ public class LevelManager : MonoBehaviour
     private void Start() 
     {
         Playfield.Instance.OnDestroyPieces += Playfield_OnDestroyPieces;
+        currentDifficultyLevel = selectedDifficultyLevel;
+        difficultyScoreMultiplier = (currentDifficultyLevel + 1);
+        blocksToNextLevel = (currentDifficultyLevel + 1) * blocksToLevelUp;
     }
 
     private void Update() 
@@ -46,10 +56,14 @@ public class LevelManager : MonoBehaviour
         UpdateTime();
     }
 
-    private void Playfield_OnDestroyPieces(object sender, int _lines)
+    private void Playfield_OnDestroyPieces(object sender, ScoreArgs _scoreArgs)
     {
+        int _lines = _scoreArgs.PiecesBurnt;
+        comboScoreMultiplier = _scoreArgs.PiecesCombo;
+        
         clearedLines += _lines;
-        Debug.Log(clearedLines);
+        levelClearedLines += _lines;
+        //Debug.Log(clearedLines);
 
         if (_lines == 4)
         {
@@ -64,8 +78,10 @@ public class LevelManager : MonoBehaviour
             levelScore += sixOrMoreBlockScore * (_lines - 5) * difficultyScoreMultiplier * comboScoreMultiplier;
         }
 
-        Debug.Log(levelScore);
-        OnLineCleared?.Invoke(this, new Vector3Int((int)levelScore, clearedLines, actualLevel));
+        LevelUpDifficulty();
+
+        Debug.Log(comboScoreMultiplier);
+        OnLineCleared?.Invoke(this, new Vector3Int((int)levelScore, clearedLines, currentDifficultyLevel));
     }
 
 
@@ -87,4 +103,25 @@ public class LevelManager : MonoBehaviour
             OnTimeElapsed?.Invoke(this, actualTime);
         }
     }
+
+    private void LevelUpDifficulty()
+    {
+        if(currentDifficultyLevel >= _MAXLEVEL)
+        {
+            return;
+        }
+
+        blocksToNextLevel = (currentDifficultyLevel + 1) * blocksToLevelUp;
+
+        
+        if(levelClearedLines >= blocksToNextLevel)
+        {
+            currentDifficultyLevel += 1;
+            levelClearedLines -= blocksToNextLevel;
+            Debug.Log("LevelUp");
+        }
+
+        OnDifficultyLevelIncreased?.Invoke(this, currentDifficultyLevel);
+    }
+    
 }

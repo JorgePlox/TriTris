@@ -3,6 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+public class ScoreArgs : EventArgs
+{
+    public int PiecesBurnt { get; set; }
+    public int PiecesCombo { get; set; }
+}
 
 public class Playfield : MonoBehaviour
 {
@@ -13,7 +18,11 @@ public class Playfield : MonoBehaviour
     private List<Vector3> directionList = new List<Vector3>() {new Vector3(1,0,0), new Vector3(-1,0,0), new Vector3(0,1,0), new Vector3(0,-1,0)};
     public static Playfield Instance;
 
-    public EventHandler<int> OnDestroyPieces;
+    private Queue<IEnumerator> coroutineQueue = new Queue<IEnumerator>();
+    private IEnumerator currentCoroutine = null;
+    private int piecesCombo = 1;
+
+    public EventHandler<ScoreArgs> OnDestroyPieces;
     public EventHandler OnFlashAnimationStarted;
     public EventHandler OnFlashAnimationEnded;
 
@@ -28,6 +37,12 @@ public class Playfield : MonoBehaviour
         }
     }
 
+
+    private void ResetCombo()
+    {
+        piecesCombo = 1; 
+    }
+
     public static Vector2 roundVec2(Vector2 position)
     {
         return new Vector2(Mathf.Round(position.x), Mathf.Round(position.y));
@@ -38,7 +53,7 @@ public class Playfield : MonoBehaviour
         return ((int) position.x >= 0 && (int) position.x < playfieldWidht && (int) position.y > 0);
     }
 
-    public void DeletePieces(float _xPos, float _yPos)
+    public bool DeletePieces(float _xPos, float _yPos)
     {
         int xPos = (int)_xPos;
         int yPos = (int)_yPos;
@@ -47,10 +62,32 @@ public class Playfield : MonoBehaviour
 
         //Debug.Log(piecesToDestroy.Count);    
         if (piecesToDestroy.Count >= 4)
-        {
-            OnDestroyPieces?.Invoke(this, piecesToDestroy.Count);
-            StartCoroutine("FlashDestroyPieces", piecesToDestroy);
+        {   
+            ScoreArgs scoreArgs = new ScoreArgs();
+            scoreArgs.PiecesBurnt = piecesToDestroy.Count;
+            scoreArgs.PiecesCombo = piecesCombo;
+            OnDestroyPieces?.Invoke(this, scoreArgs);
+
+            // if (coroutineQueue.Count == 0)
+            // {
+            //     currentCoroutine = FlashDestroyPieces(piecesToDestroy);
+            //     StartCoroutine(currentCoroutine);
+
+            // }
+            // else
+            // {
+                currentCoroutine = FlashDestroyPieces(piecesToDestroy);
+                StartCoroutine(currentCoroutine);
+                coroutineQueue.Enqueue(currentCoroutine);
+            //}
+
+
+            piecesCombo+=1;
+
+            return true;
         }
+
+        return false;
 
     }
 
@@ -81,6 +118,7 @@ public class Playfield : MonoBehaviour
 
     private void DecreasePieces()
     {
+        bool isPieceDeleted = false;
         Vector3 movePos = new Vector3(0,-1,0);
         for (int y = 0; y < playfieldHeight; ++y)
             for (int x = 0; x < playfieldWidht; ++x)
@@ -91,16 +129,29 @@ public class Playfield : MonoBehaviour
                     {
                         objectGrid[x, y] = null;
                         blockCodeGrid[x, y] = 0;
+
                         block.position += movePos;
+
                         int newx = (int)block.position.x;
                         int newy = (int)block.position.y;
+
                         objectGrid[newx, newy] = block;
                         blockCodeGrid[newx, newy] = block.GetComponent<Block>().GetBlockCode();
-
-                        DeletePieces(newx, newy);
-                        
                     }
                 }
+
+        for (int y = 0; y < playfieldHeight; ++y)
+            for (int x = 0; x < playfieldWidht; ++x)
+                if (objectGrid[x, y] != null && objectGrid[x, y].parent != PieceController.Instance.GetCurrentPiece())
+                {
+                    isPieceDeleted |= DeletePieces(x, y);
+                }       
+
+        if (!isPieceDeleted)
+        {
+            ResetCombo();
+            //Debug.Log("ResetCombo!");
+        }
     }
 
 
@@ -136,7 +187,6 @@ public class Playfield : MonoBehaviour
                     }
                 }
 
-
         foreach (Transform block in _piece)
         {
             Vector2 blockPosition = Playfield.roundVec2(block.position);
@@ -166,8 +216,7 @@ public class Playfield : MonoBehaviour
     }
 
     private IEnumerator FlashDestroyPieces(List<Transform> piecesList)
-    {
-        
+    {       
         foreach (Transform _block in piecesList)
         {
             _block.GetComponent<Animator>().SetTrigger("Flashing");
@@ -176,19 +225,19 @@ public class Playfield : MonoBehaviour
         }
 
         OnFlashAnimationStarted?.Invoke(this, EventArgs.Empty);
-        Time.timeScale = 0;
-        //Debug.Log("Pause");
         yield return new WaitForSecondsRealtime(1f);
-        Time.timeScale = 1;
-        //Debug.Log("UnPause");
-        OnFlashAnimationEnded?.Invoke(this, EventArgs.Empty);
+        coroutineQueue.Dequeue();
+
+        if (coroutineQueue.Count == 0)
+        {
+            OnFlashAnimationEnded?.Invoke(this, EventArgs.Empty);
+        }
 
         foreach(Transform _block in piecesList)
         {   
             Destroy(_block.gameObject);
         }
         DecreasePieces();
-        
 
     }
 }

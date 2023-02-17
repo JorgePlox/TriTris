@@ -34,9 +34,10 @@ public class PieceController : MonoBehaviour
         InputManager.Instance.OnRotateRecieved += Input_OnRotateRecieved;
         InputManager.Instance.OnMovementStackRecieved += Input_OnMovementStackRecieved;
 
+        LevelManager.Instance.OnDifficultyLevelIncreased += GameModeManager_OnDifficultyLevelIncreased;
+
         SpawnNextPiece();
     }
-
 
     private void Update()
     {
@@ -64,6 +65,11 @@ public class PieceController : MonoBehaviour
     private void Input_OnMovementStackRecieved(object sender, EventArgs e)
     {
         MoveStackDown();
+    }
+
+    private void GameModeManager_OnDifficultyLevelIncreased(object sender, int _currentLevel)
+    {
+        ChangeLevel(_currentLevel);
     }
 
     public void MoveHorizontal(int _input)
@@ -191,6 +197,7 @@ public class PieceController : MonoBehaviour
         if (stackTimer >= stackBufferTime)
         {
             List<Transform> stackList= DisbandPiece(currentPiece);
+            
             foreach(Transform block in stackList)
             {
                 Playfield.Instance.DeletePieces(block.position.x, block.position.y);
@@ -224,6 +231,12 @@ public class PieceController : MonoBehaviour
             block.parent = null;
         }
         return disbandList;
+    }
+
+    private void ChangeLevel(int _currentLevel)
+    {   
+        fallWaitTime = (-0.9f / (1f + Mathf.Pow(2.7f, -_currentLevel+4)))+1; //1f * (10-_currentLevel)/10;
+        stackBufferTime = 0.5f * (5-(int)(_currentLevel/2))/5;
     }
 
     public Transform GetCurrentPiece()

@@ -9,6 +9,14 @@ public enum GameState
     gameOver
 }
 
+public enum GameMode
+{
+    None,
+    marathon,
+    clearBlocks,
+    timed
+}
+
 public class GameModeManager : MonoBehaviour
 {
     public GameState currentGameState = GameState.inGame;
@@ -36,10 +44,15 @@ public class GameModeManager : MonoBehaviour
     private void Playfield_OnFlashAnimationEnded(object sender, EventArgs e)
     {
         currentGameState = GameState.inGame;
+        Time.timeScale = 1;
+        //Debug.Log("UnPause");
+        
     }
 
     private void Playfield_OnFlashAnimationStarted(object sender, EventArgs e)
     {
         currentGameState = GameState.pause;
+        Time.timeScale = 0;
+        //Debug.Log("Pause");
     }
 }
