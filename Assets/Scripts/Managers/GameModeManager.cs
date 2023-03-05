@@ -2,11 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 public enum GameState
 {
     pause,
     inGame,
-    gameOver
+    gameOver,
+    mainMenu
 }
 
 public enum GameMode
@@ -19,7 +21,7 @@ public enum GameMode
 
 public class GameModeManager : MonoBehaviour
 {
-    public GameState currentGameState = GameState.inGame;
+    public GameState currentGameState = GameState.mainMenu;
     public static GameModeManager Instance;
 
     
@@ -37,9 +39,9 @@ public class GameModeManager : MonoBehaviour
 
     private void Start()
     {
-        Playfield.Instance.OnFlashAnimationStarted += Playfield_OnFlashAnimationStarted;
-        Playfield.Instance.OnFlashAnimationEnded += Playfield_OnFlashAnimationEnded;
+        InputManager.Instance.OnAnyKeyPressed += InputManager_LeaveMainMenu;
     }
+
 
     private void Playfield_OnFlashAnimationEnded(object sender, EventArgs e)
     {
@@ -55,4 +57,28 @@ public class GameModeManager : MonoBehaviour
         Time.timeScale = 0;
         //Debug.Log("Pause");
     }
+
+    private void Playfield_OnGameOver(object sender, EventArgs e)
+    {
+        currentGameState = GameState.gameOver;
+        SceneManager.LoadScene(0);
+    }
+
+    public void StartGame()
+    {
+
+        Playfield.Instance.OnFlashAnimationStarted += Playfield_OnFlashAnimationStarted;
+        Playfield.Instance.OnFlashAnimationEnded += Playfield_OnFlashAnimationEnded;
+
+        Playfield.Instance.OnGameOver += Playfield_OnGameOver;
+
+        currentGameState = GameState.inGame;
+    }
+
+    private void InputManager_LeaveMainMenu(object sender, EventArgs e)
+    {
+        SceneManager.LoadScene(1);
+    }
+
+    
 }

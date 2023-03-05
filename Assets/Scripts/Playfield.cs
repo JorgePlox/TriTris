@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 public class ScoreArgs : EventArgs
 {
     public int PiecesBurnt { get; set; }
@@ -25,6 +24,7 @@ public class Playfield : MonoBehaviour
     public EventHandler<ScoreArgs> OnDestroyPieces;
     public EventHandler OnFlashAnimationStarted;
     public EventHandler OnFlashAnimationEnded;
+    public EventHandler OnGameOver;
 
     private void Awake() {
         if (Instance != null && Instance != this)
@@ -37,6 +37,9 @@ public class Playfield : MonoBehaviour
         }
     }
 
+    private void Start() {
+        GameModeManager.Instance.StartGame();
+    }
 
     private void ResetCombo()
     {
@@ -206,8 +209,7 @@ public class Playfield : MonoBehaviour
         {
             if (objectGrid[x,maxY] != null && objectGrid[x,maxY].parent != _piece)
             {
-                Scene scene = SceneManager.GetActiveScene();
-                SceneManager.LoadScene(scene.name);
+                OnGameOver?.Invoke(this, EventArgs.Empty);
                 return true;
             }
         }

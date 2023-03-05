@@ -13,6 +13,8 @@ public class InputManager : MonoBehaviour
     public event EventHandler OnMovementDownRecieved;
     public event EventHandler OnMovementStackRecieved;
 
+    public event EventHandler OnAnyKeyPressed;
+
     private float movementTimer = 0.2f;
     private bool isRightPressed = false;
     private float rightTimer = 0f;
@@ -35,9 +37,13 @@ public class InputManager : MonoBehaviour
 
     private void Update() 
     {
-        if (GameModeManager.Instance.currentGameState != GameState.pause)
+        if (GameModeManager.Instance.currentGameState == GameState.inGame)
         {
             PieceMovement();
+        }
+        else if (GameModeManager.Instance.currentGameState == GameState.mainMenu)
+        {
+            AnyKeyPressed();
         }
     }
 
@@ -116,6 +122,14 @@ public class InputManager : MonoBehaviour
             isDownPressed = false;
         }
 
+    }
+
+    public void AnyKeyPressed()
+    {
+        if (Input.anyKeyDown)
+        {
+            OnAnyKeyPressed?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     IEnumerator BufferInput()
